@@ -1,8 +1,18 @@
 // src/api.js
 
-// الصور مباشرة بدون proxy (أسرع)
+// الصور: proxy فقط إذا HTTP على production
 export function proxyImg(url) {
-  return url || null;
+  if (!url) return null;
+
+  // في production (Vercel) وإذا كان الرابط HTTP، نمرره عبر proxy
+  const isProduction = window.location.protocol === 'https:';
+  const isHttp = url.startsWith('http://');
+
+  if (isProduction && isHttp) {
+    return `/api/proxy?type=api&url=${encodeURIComponent(url)}`;
+  }
+
+  return url;
 }
 
 export class XtreamAPI {

@@ -1,5 +1,5 @@
 // api/proxy.js — Vercel Serverless Function
-// بروكسي بسيط للـ API فقط (الفيديو والصور مباشرة)
+// بروكسي للـ API والصور (الفيديو مباشر)
 
 export const config = {
   api: { responseLimit: false, bodyParser: false },
@@ -57,13 +57,22 @@ export default async function handler(req, res) {
       });
     }
 
+    const contentType = response.headers.get('content-type') || '';
+
     // نسخ headers
     ['content-type', 'content-length', 'cache-control'].forEach(h => {
       const value = response.headers.get(h);
       if (value) res.setHeader(h, value);
     });
 
-    // إرجاع البيانات
+    // للصور: إرجاع binary
+    if (contentType.includes('image/')) {
+      const buffer = await response.arrayBuffer();
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+      return res.status(200).send(Buffer.from(buffer));
+    }
+
+    // للنصوص و JSON
     const text = await response.text();
     return res.status(200).send(text);
 

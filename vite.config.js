@@ -1,6 +1,5 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import { createServer as createHttpServer } from 'http'
 
 // ===== Middleware يحاكي api/proxy.js لوكلياً =====
 function localProxyMiddleware() {
@@ -36,7 +35,7 @@ function localProxyMiddleware() {
           if (req.headers['range']) headers['Range'] = req.headers['range']
 
           const controller = new AbortController()
-          const timeout = setTimeout(() => controller.abort(), 25000)
+          const timeout = setTimeout(() => controller.abort(), 15000)
 
           const response = await fetch(targetUrl, {
             headers,
@@ -46,27 +45,14 @@ function localProxyMiddleware() {
           clearTimeout(timeout)
 
           // تمرير headers مهمة
-          ;['content-type','content-length','content-range','accept-ranges','cache-control'].forEach(h => {
+          ;['content-type','content-length','cache-control'].forEach(h => {
             const v = response.headers.get(h)
             if (v) res.setHeader(h, v)
           })
 
           res.writeHead(response.status)
 
-          const contentType = response.headers.get('content-type') || ''
-          const isM3U8 = contentType.includes('mpegurl') || contentType.includes('m3u') ||
-                         targetUrl.includes('.m3u8') || targetUrl.includes('.m3u')
-
-          if (isM3U8) {
-            let text = await response.text()
-            const baseUrl = targetUrl.substring(0, targetUrl.lastIndexOf('/') + 1)
-            text = text.replace(/^((?!#|https?:\/\/).+\.(?:m3u8|ts|aac|mp4|fmp4))$/gm, match => {
-              return `/api/proxy?url=${encodeURIComponent(baseUrl + match)}`
-            })
-            return res.end(text)
-          }
-
-          // ملفات ثنائية — stream مباشر
+          // إرجاع البيانات
           const buf = await response.arrayBuffer()
           res.end(Buffer.from(buf))
 
