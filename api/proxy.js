@@ -35,6 +35,7 @@ export default async function handler(req, res) {
   const ext = targetUrl.split('?')[0].split('.').pop().toLowerCase();
   const isM3U8   = type === 'm3u8'   || ext === 'm3u8' || ext === 'm3u';
   const isStream = type === 'stream' || ext === 'ts' || ext === 'mp4' || ext === 'mkv' || ext === 'avi';
+  const isImage  = ext === 'jpg' || ext === 'jpeg' || ext === 'png' || ext === 'gif' || ext === 'webp';
   const isAPI    = type === 'api'    || targetUrl.includes('player_api.php');
 
   // ===== بث الفيديو والـ segments: Redirect مباشر =====
@@ -119,7 +120,17 @@ export default async function handler(req, res) {
       return res.status(200).send(fixed);
     }
 
-    // ===== JSON / نص =====
+    // ===== JSON / نص / صور =====
+    const contentType = response.headers.get('content-type') || '';
+
+    // للصور: نرجعها كـ binary
+    if (isImage || contentType.includes('image/')) {
+      const buffer = await response.arrayBuffer();
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+      return res.status(response.status).send(Buffer.from(buffer));
+    }
+
+    // للنصوص و JSON
     const text = await response.text();
     return res.status(response.status).send(text);
 

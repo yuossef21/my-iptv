@@ -1,8 +1,13 @@
 // src/api.js
 
-// الصور مباشرة — المتصفح يحملها بدون مشكلة
+// الصور عبر البروكسي لحل Mixed Content
 export function proxyImg(url) {
-  return url || null;
+  if (!url) return null;
+  // إذا كان الرابط HTTP، نمرره عبر البروكسي
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return `/api/proxy?type=stream&url=${encodeURIComponent(url)}`;
+  }
+  return url;
 }
 
 export class XtreamAPI {
