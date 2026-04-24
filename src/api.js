@@ -1,13 +1,8 @@
 // src/api.js
 
-// الصور عبر البروكسي لحل Mixed Content
+// الصور مباشرة بدون proxy (أسرع)
 export function proxyImg(url) {
-  if (!url) return null;
-  // إذا كان الرابط HTTP، نمرره عبر البروكسي
-  if (url.startsWith('http://') || url.startsWith('https://')) {
-    return `/api/proxy?type=stream&url=${encodeURIComponent(url)}`;
-  }
-  return url;
+  return url || null;
 }
 
 export class XtreamAPI {
@@ -20,21 +15,16 @@ export class XtreamAPI {
     return `/api/proxy?type=api&url=${encodeURIComponent(target)}`;
   }
 
-  // البث عبر البروكسي بنوع m3u8 (الـ proxy يصلح الروابط ويعمل redirect للـ segments)
+  // البث مباشر بدون proxy (مثل النسخة القديمة)
   getStreamUrl(type, streamId, extension = 'm3u8') {
     const { url, username, password } = this.session;
-    let direct;
-    if (type === 'live')        direct = `${url}/live/${username}/${password}/${streamId}.m3u8`;
-    else if (type === 'series') direct = `${url}/series/${username}/${password}/${streamId}.${extension}`;
-    else                        direct = `${url}/movie/${username}/${password}/${streamId}.${extension}`;
-
-    // HLS يمر عبر البروكسي لإصلاح الروابط
-    // الـ segments تروح redirect مباشر → بدون timeout
-    if (extension === 'm3u8' || extension === 'm3u' || type === 'live') {
-      return `/api/proxy?type=m3u8&url=${encodeURIComponent(direct)}`;
+    if (type === 'live') {
+      return `${url}/live/${username}/${password}/${streamId}.m3u8`;
+    } else if (type === 'series') {
+      return `${url}/series/${username}/${password}/${streamId}.${extension}`;
+    } else {
+      return `${url}/movie/${username}/${password}/${streamId}.${extension}`;
     }
-    // mp4 / mkv → redirect مباشر
-    return `/api/proxy?type=stream&url=${encodeURIComponent(direct)}`;
   }
 
   async fetchAPI(url) {
