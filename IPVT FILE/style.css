@@ -65,6 +65,14 @@ button {
     background: #4f5880;
 }
 
+.btn-primary {
+    background: var(--primary);
+}
+
+.btn-primary:hover {
+    background: #2563eb;
+}
+
 input {
     padding: 10px 15px;
     background: #0b0c10;
@@ -429,3 +437,65 @@ select {
 ::-webkit-scrollbar-thumb:hover {
     background: var(--primary);
 }
+/* Responsive Design */
+@media (max-width: 768px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+        padding: 20px;
+    }
+    .content-body {
+        flex-direction: column;
+    }
+    .sidebar {
+        width: 100%;
+        height: auto;
+        overflow-y: hidden;
+        overflow-x: auto;
+        border-left: none;
+        border-bottom: 1px solid #2a2f45;
+    }
+    .sidebar > div {
+        display: flex;
+        flex-direction: row;
+        width: max-content;
+    }
+    .category-item {
+        border-bottom: none;
+        border-left: 1px solid #1e2233;
+        white-space: nowrap;
+    }
+    .category-item:hover,
+    .category-item.active {
+        border-right: none;
+        border-bottom: 4px solid white;
+    }
+    .login-container {
+        width: 90%;
+        padding: 25px;
+    }
+    .streams-grid {
+        grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+        padding: 10px;
+    }
+    .main-header, .content-toolbar, .player-header {
+        flex-direction: column;
+        height: auto;
+        gap: 10px;
+        align-items: stretch;
+    }
+    .content-toolbar h2, .player-header h2 {
+        order: -1;
+        text-align: center;
+    }
+    .player-controls-bar {
+        flex-direction: column;
+        gap: 5px;
+    }
+}
+
+/* TV Remote Focus Styles */
+.dash-card:focus, .category-item:focus, .stream-card:focus, .episode-card:focus, .season-btn:focus, button:focus, input:focus { outline: 3px solid #3b82f6 !important; transform: scale(1.05) !important; box-shadow: 0 0 15px rgba(59, 130, 246, 0.8) !important; z-index: 10 !important; background-color: rgba(59, 130, 246, 0.1); }
+.category-item:focus { background: rgba(59, 130, 246, 0.3) !important; border-right-color: #3b82f6 !important; transform: none !important; }
+.dash-card { transition: all 0.2s ease; }
+.stream-card { transition: all 0.2s ease; }
+.episode-card { transition: all 0.2s ease; }

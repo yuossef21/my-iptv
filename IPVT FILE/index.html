@@ -21,13 +21,13 @@
         <div class="login-container">
             <h2>تسجيل الدخول للنظام</h2>
             <!-- تنبيه CORS -->
-            <div class="cors-notice">
-                🔧 للأداء الأمثل: فعّل إضافة
+            <div class="cors-notice" style="background:#dc2626; border-color:#ef4444; color:#fff;">
+                ⚠️ <b>هام جداً:</b> يجب عليك تثبيت وتفعيل إضافة 
                 <a href="https://chromewebstore.google.com/detail/allow-cors-access-control/lhobafahddgcelffkeicbaginigeejlf"
-                    target="_blank" style="color:#60a5fa;">
+                    target="_blank" style="color:#bfdbfe; text-decoration: underline;">
                     Allow CORS
                 </a>
-                في المتصفح
+                في متصفحك لكي يعمل النظام.
             </div>
             <form id="login-form">
                 <div class="input-group">
@@ -53,6 +53,14 @@
             <div class="logo">PRO IPTV CORE</div>
             <div class="user-info">
                 <span id="display-user"></span>
+                <label style="display:flex; align-items:center; gap:5px; font-size:12px; cursor:pointer; background:#1e293b; padding:5px 10px; border-radius:5px;">
+                    <input type="checkbox" id="family-toggle" checked>
+                    👨‍👩‍👧 مشاهدة عائلية
+                </label>
+                <label style="display:flex; align-items:center; gap:5px; font-size:12px; cursor:pointer; background:#1e293b; padding:5px 10px; border-radius:5px;">
+                    <input type="checkbox" id="history-toggle" checked>
+                    حفظ سجل المشاهدة
+                </label>
                 <button id="logout-btn" class="btn-danger">تسجيل الخروج</button>
             </div>
         </header>
@@ -101,6 +109,7 @@
     <div id="player-screen" class="screen">
         <header class="player-header">
             <button id="close-player-btn" class="btn-secondary">⬅ إغلاق المشغل</button>
+            <button id="next-ep-btn" class="btn-primary" style="display:none; margin-right: 10px;">الحلقة التالية ⏭</button>
             <h2 id="player-title">جاري التشغيل...</h2>
             <div class="player-controls-bar">
                 <div class="engine-selector">

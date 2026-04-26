@@ -11,6 +11,9 @@ let displayedCount = 0;
 const CHUNK_SIZE = 40;
 let scrollObserver = null;
 
+let currentPlaylist = [];
+let currentPlaylistIndex = -1;
+
 // ===== كاشف الـ Codec =====
 const CodecSupport = {
     h265: false,
@@ -27,48 +30,47 @@ const CodecSupport = {
     }
 };
 
-// ===== إعدادات HLS – أقصى استفادة من الإنترنت =====
+// ===== إعدادات HLS – أقصى قوة وسرعة رهيبة =====
 function getHlsConfig(isLive) {
     return {
-        // ===== Buffer أقصى درجة =====
-        maxBufferLength: isLive ? 60 : 120,
-        maxMaxBufferLength: isLive ? 120 : 600,
-        maxBufferSize: 256 * 1024 * 1024,   // 256 MB RAM
-        maxBufferHole: 0.1,
-        highBufferWatchdogPeriod: 3,
+        // ===== Buffer متوازن لتجنب طرد السيرفر للبث المباشر =====
+        maxBufferLength: isLive ? 15 : 120,
+        maxMaxBufferLength: isLive ? 30 : 600,
+        maxBufferSize: 64 * 1024 * 1024,   // 64 MB RAM
+        maxBufferHole: 0.5,
+        highBufferWatchdogPeriod: 2,
         nudgeMaxRetry: 10,
 
-        // ===== ABR – دائماً أعلى جودة =====
+        // ===== ABR – دائماً أعلى جودة وسرعة استجابة =====
         startLevel: -1,
-        abrEwmaDefaultEstimate: 60 * 1024 * 1024,    // 60 Mbps
+        abrEwmaDefaultEstimate: 50 * 1024 * 1024,    // 50 Mbps
         abrBandWidthFactor: 0.95,
         abrBandWidthUpFactor: 0.90,
         abrMaxWithRealBitrate: true,
 
-        // ===== أداء =====
+        // ===== أداء قوي جداً =====
         enableWorker: true,
         progressive: true,
         lowLatencyMode: isLive,
-        backBufferLength: isLive ? 30 : 120,
-        maxFragLookUpTolerance: 0.1,
+        backBufferLength: isLive ? 10 : 90,
+        maxFragLookUpTolerance: 0.2,
 
-        // ===== Retry محسّن =====
+        // ===== تفادي خطأ ERR_CONTENT_LENGTH_MISMATCH =====
+        enableFetch: false, // إجبار استخدام XHR لأنه يتجاهل أخطاء الطول الوهمية من سيرفرات IPTV
+
+        // ===== Retry عنيف جداً لتعويض انقطاع السيرفر =====
         manifestLoadingTimeOut: 10000,
         manifestLoadingMaxRetry: 10,
-        manifestLoadingRetryDelay: 300,
+        manifestLoadingRetryDelay: 500,
         levelLoadingTimeOut: 10000,
         levelLoadingMaxRetry: 10,
-        levelLoadingRetryDelay: 300,
-        fragLoadingTimeOut: 25000,
-        fragLoadingMaxRetry: 10,
-        fragLoadingRetryDelay: 300,
+        levelLoadingRetryDelay: 500,
+        fragLoadingTimeOut: 20000,
+        fragLoadingMaxRetry: 15,
+        fragLoadingRetryDelay: 500,
 
         // ===== CORS =====
-        xhrSetup(xhr) { xhr.withCredentials = false; },
-        fetchSetup(context, initParams) {
-            initParams.credentials = 'omit';
-            return new Request(context.url, initParams);
-        }
+        xhrSetup(xhr) { xhr.withCredentials = false; }
     };
 }
 
@@ -89,17 +91,70 @@ const dom = {
     contentTitle: document.getElementById('content-title'),
     playerTitle: document.getElementById('player-title'),
     engineSelect: document.getElementById('engine-select'),
+    historyToggle: document.getElementById('history-toggle'),
 };
 
 // ===== إقلاع =====
+let watchHistory = JSON.parse(localStorage.getItem('iptv_history')) || {};
+
+function isAdultContent(text) {
+    if (!text) return false;
+    const t = text.toLowerCase();
+    return t.includes('18+') || t.includes('+18') || t.includes('xxx') || t.includes('adult') || t.includes('porn') || t.includes('للكبار');
+}
+
+dom.familyToggle?.addEventListener('change', () => {
+    if (currentType) document.querySelector(`.dash-card.${currentType}`)?.click();
+});
+
 document.addEventListener('DOMContentLoaded', async () => {
     await CodecSupport.detect();
     buildEngineOptions();
 
-    if (localStorage.getItem('iptv_session')) {
-        api = new XtreamAPI();
-        showScreen(dom.dashScreen);
-        dom.displayUser.textContent = `مرحباً، ${api.session.username}`;
+    // إعدادات الدخول التلقائي
+    const autoUrl = "http://9tv.one:80";
+    const autoUser = "23441138792";
+    const autoPass = "76943549847";
+    
+    api = new XtreamAPI();
+    try {
+        const d = await api.authenticate(autoUrl, autoUser, autoPass);
+        if (d.user_info) {
+            const max = parseInt(d.user_info.max_connections) || 0;
+            const active = parseInt(d.user_info.active_cons) || 0;
+            if (max > 0 && active >= max) {
+                setTimeout(() => {
+                    alert(`⚠️ تحذير: لقد وصلت للحد الأقصى للأجهزة المتصلة (${active}/${max}).\nالسيرفر قد يمنع البث! يرجى إغلاق التطبيق من أجهزتك الأخرى فوراً ليعمل التطبيق بثبات.`);
+                }, 1000);
+            }
+        }
+    } catch(e) {}
+    
+    localStorage.setItem('iptv_session', JSON.stringify({ url: autoUrl, username: autoUser, password: autoPass }));
+    
+    showScreen(dom.dashScreen);
+    dom.displayUser.textContent = `مرحباً بك في PRO IPTV`;
+    
+    // الدخول مباشرة لقسم الأفلام لسرعة الوصول
+    setTimeout(() => {
+        document.querySelector('.dash-card.movies')?.click();
+    }, 500);
+
+    // برمجة زر الرجوع للأندرويد
+    if (window.Capacitor && window.Capacitor.Plugins.App) {
+        window.Capacitor.Plugins.App.addListener('backButton', () => {
+            if (document.fullscreenElement) {
+                document.exitFullscreen().catch(()=>{});
+            } else if (dom.playerScreen.classList.contains('active')) {
+                document.getElementById('close-player-btn').click();
+            } else if (dom.seriesModal.classList.contains('active')) {
+                document.getElementById('close-modal-btn').click();
+            } else if (dom.contentView.style.display !== 'none') {
+                document.getElementById('back-to-dash-btn').click();
+            } else if (dom.dashScreen.classList.contains('active') || dom.loginScreen.classList.contains('active')) {
+                window.Capacitor.Plugins.App.exitApp();
+            }
+        });
     }
 });
 
@@ -155,6 +210,7 @@ document.getElementById('logout-btn').addEventListener('click', () => {
 
 // ===== الأقسام =====
 document.querySelectorAll('.dash-card').forEach(card => {
+    card.setAttribute('tabindex', '0');
     card.addEventListener('click', async () => {
         currentType = card.dataset.type;
         dom.contentTitle.textContent = card.querySelector('h3').textContent;
@@ -177,10 +233,16 @@ function renderCategories(cats) {
     dom.categoriesList.innerHTML = '';
     const wrap = document.createElement('div');
     dom.categoriesList.appendChild(wrap);
+    
+    if (dom.familyToggle?.checked) {
+        cats = cats?.filter(cat => !isAdultContent(cat.category_name)) || [];
+    }
+
     if (!cats?.length) return wrap.innerHTML = '<div class="category-item">لا توجد أقسام</div>';
     cats.forEach((cat, i) => {
         const div = document.createElement('div');
         div.className = 'category-item';
+        div.setAttribute('tabindex', '0');
         div.textContent = cat.category_name;
         div.onclick = () => {
             document.querySelectorAll('.category-item').forEach(el => el.classList.remove('active'));
@@ -195,7 +257,14 @@ function renderCategories(cats) {
 
 async function loadStreams(catId) {
     dom.streamsList.innerHTML = '<h3 style="grid-column:1/-1;text-align:center;">جاري التحميل...</h3>';
-    try { allCurrentStreams = await api.getStreams(currentType, catId) || []; renderStreamsList(allCurrentStreams, true); }
+    try { 
+        let streams = await api.getStreams(currentType, catId) || []; 
+        if (dom.familyToggle?.checked) {
+            streams = streams.filter(s => !isAdultContent(s.name) && !isAdultContent(s.title));
+        }
+        allCurrentStreams = streams;
+        renderStreamsList(allCurrentStreams, true); 
+    }
     catch { dom.streamsList.innerHTML = '<h3 style="color:red;grid-column:1/-1;text-align:center;">خطأ بالتحميل</h3>'; }
 }
 
@@ -205,6 +274,7 @@ function renderStreamsList(arr, isNew = false) {
     arr.slice(displayedCount, displayedCount + CHUNK_SIZE).forEach(s => {
         const card = document.createElement('div');
         card.className = 'stream-card';
+        card.setAttribute('tabindex', '0');
         const icon = s.stream_icon || s.cover || FALLBACK_IMAGE;
         const name = s.name || s.title;
         const id = s.stream_id || s.series_id;
@@ -217,6 +287,10 @@ function renderStreamsList(arr, isNew = false) {
     displayedCount = Math.min(displayedCount, arr.length + CHUNK_SIZE);
     // fix counter
     displayedCount = Math.min(arr.length, displayedCount);
+
+    if (isNew && arr.length > 0) {
+        setTimeout(() => dom.streamsList.querySelector('.stream-card')?.focus(), 100);
+    }
 
     if (displayedCount < arr.length) {
         const s = Object.assign(document.createElement('div'), { style: 'height:20px;grid-column:1/-1' });
@@ -236,7 +310,11 @@ dom.searchInput.addEventListener('input', e => {
         dom.streamsList.innerHTML = '<h3 style="grid-column:1/-1;text-align:center;">جاري البحث...</h3>';
         try {
             if (!globalStreamsCache[currentType]) globalStreamsCache[currentType] = await api.getAllStreams(currentType);
-            renderStreamsList((globalStreamsCache[currentType] || []).filter(s => (s.name || s.title || '').toLowerCase().includes(term)), true);
+            let filtered = (globalStreamsCache[currentType] || []).filter(s => (s.name || s.title || '').toLowerCase().includes(term));
+            if (dom.familyToggle?.checked) {
+                filtered = filtered.filter(s => !isAdultContent(s.name) && !isAdultContent(s.title));
+            }
+            renderStreamsList(filtered, true);
             document.querySelectorAll('.category-item').forEach(el => el.classList.remove('active'));
         } catch { dom.streamsList.innerHTML = '<h3 style="color:red;grid-column:1/-1;text-align:center;">فشل البحث</h3>'; }
     }, 500);
@@ -256,9 +334,10 @@ async function openSeriesModal(sid, stitle) {
         Object.keys(d.episodes).forEach((n, i) => {
             const btn = document.createElement('button');
             btn.className = 'season-btn'; btn.textContent = `موسم ${n}`;
+            btn.setAttribute('tabindex', '0');
             btn.onclick = () => { document.querySelectorAll('.season-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); renderEpisodes(d.episodes[n]); };
             sc.appendChild(btn);
-            if (i === 0) btn.click();
+            if (i === 0) { btn.click(); setTimeout(() => btn.focus(), 100); }
         });
     } catch { sc.innerHTML = '<span style="color:red">فشل جلب تفاصيل المسلسل</span>'; }
 }
@@ -266,12 +345,18 @@ async function openSeriesModal(sid, stitle) {
 function renderEpisodes(eps) {
     const c = document.getElementById('episodes-container');
     c.innerHTML = '';
-    eps.forEach(ep => {
+    eps.forEach((ep, index) => {
         const card = document.createElement('div');
         card.className = 'episode-card';
+        card.setAttribute('tabindex', '0');
         const title = ep.title || `حلقة ${ep.episode_num}`;
         card.innerHTML = `<h4>${title}</h4><p style="font-size:.8rem;color:#888">${ep.info?.duration || ''}</p>`;
-        card.onclick = () => { dom.seriesModal.classList.remove('active'); openPlayer(ep.id, title, ep.container_extension || 'mkv', 'series'); };
+        card.onclick = () => { 
+            dom.seriesModal.classList.remove('active'); 
+            currentPlaylist = eps;
+            currentPlaylistIndex = index;
+            openPlayer(ep.id, title, ep.container_extension || 'mkv', 'series'); 
+        };
         c.appendChild(card);
     });
 }
@@ -287,8 +372,28 @@ function openPlayer(streamId, title, extension, forcedType = null) {
     const type = forcedType || currentType;
     currentStreamUrl = api.getStreamUrl(type, streamId, extension);
     window._currentPlayerInfo = { streamId, title, extension, type };
+    
+    const nextBtn = document.getElementById('next-ep-btn');
+    if (nextBtn) {
+        if (type === 'series' && currentPlaylist.length > 0 && currentPlaylistIndex >= 0 && currentPlaylistIndex < currentPlaylist.length - 1) {
+            nextBtn.style.display = 'inline-block';
+            nextBtn.onclick = playNextEpisode;
+        } else {
+            nextBtn.style.display = 'none';
+        }
+    }
+
     showScreen(dom.playerScreen);
     triggerPlayer();
+}
+
+function playNextEpisode() {
+    if (currentPlaylistIndex >= 0 && currentPlaylistIndex < currentPlaylist.length - 1) {
+        currentPlaylistIndex++;
+        const nextEp = currentPlaylist[currentPlaylistIndex];
+        const title = nextEp.title || `حلقة ${nextEp.episode_num}`;
+        openPlayer(nextEp.id, title, nextEp.container_extension || 'mkv', 'series');
+    }
 }
 
 function triggerPlayer() {
@@ -307,6 +412,35 @@ function triggerPlayer() {
 
     attachBufferingEvents(video);
     showBufferingOverlay(true);
+
+    const onEnded = () => {
+        if (window._currentPlayerInfo?.type === 'series' && currentPlaylistIndex >= 0 && currentPlaylistIndex < currentPlaylist.length - 1) {
+            playNextEpisode();
+        }
+    };
+    video.addEventListener('ended', onEnded);
+
+    // حفظ سجل المشاهدة واستئنافه
+    let lastSave = 0;
+    video.addEventListener('timeupdate', () => {
+        if (!dom.historyToggle?.checked || !window._currentPlayerInfo?.streamId || isLive) return;
+        const now = Date.now();
+        if (now - lastSave > 5000 && video.currentTime > 5) {
+            watchHistory[window._currentPlayerInfo.streamId] = video.currentTime;
+            localStorage.setItem('iptv_history', JSON.stringify(watchHistory));
+            lastSave = now;
+        }
+    });
+
+    video.addEventListener('canplay', () => {
+        if (dom.historyToggle?.checked && window._currentPlayerInfo?.streamId && !isLive) {
+            const savedTime = watchHistory[window._currentPlayerInfo.streamId];
+            if (savedTime > 10 && video.currentTime < 5) {
+                video.currentTime = savedTime;
+                showNotification('تم استئناف المشاهدة من حيث توقفت ⏱️');
+            }
+        }
+    }, { once: true });
 
     if (engine === 'videojs') playWithVideoJS(video, url, isHLS, isMKV, isTS);
     else if (engine === 'direct') playDirectVideo(video, url);
@@ -345,8 +479,9 @@ function playWithHlsJS(video, url, isLive) {
         if (bw > 0) updateBandwidthDisplay(bw);
     });
 
+    // ===== Auto-Reconnect المخفي السريع =====
     let errCnt = 0, mediaErrCnt = 0;
-    hlsInstance.on(Hls.Events.ERROR, (_, d) => {
+    const errorHandler = (_, d) => {
         if (!d.fatal) {
             if (d.details === Hls.ErrorDetails.BUFFER_STALLED_ERROR ||
                 d.details === Hls.ErrorDetails.BUFFER_NUDGE_ON_STALL) {
@@ -354,17 +489,46 @@ function playWithHlsJS(video, url, isLive) {
             }
             return;
         }
-        errCnt++;
+        
         if (d.type === Hls.ErrorTypes.NETWORK_ERROR) {
-            setTimeout(() => hlsInstance?.startLoad(), Math.min(errCnt * 500, 4000));
+            if (d.details === Hls.ErrorDetails.FRAG_LOAD_ERROR || d.details === Hls.ErrorDetails.FRAG_LOAD_TIMEOUT) {
+                // خطأ في جزء من الفيديو (شائع جداً في البث المباشر)، نحاول جلبه مجدداً بدون تدمير المشغل
+                console.warn("Fragment error, retrying...");
+                hlsInstance.startLoad();
+            } else {
+                console.warn("السيرفر قطع الاتصال بشكل كامل! جاري إعادة الاتصال السريع المخفي...");
+                const currentTime = video.currentTime;
+                
+                // إعادة بناء المشغل في الخلفية في أجزاء من الثانية
+                setTimeout(() => {
+                    if(!dom.playerScreen.classList.contains('active')) return;
+                    if(hlsInstance) { hlsInstance.destroy(); hlsInstance = null; }
+                    
+                    hlsInstance = new Hls(getHlsConfig(isLive));
+                    hlsInstance.loadSource(url);
+                    hlsInstance.attachMedia(video);
+                    
+                    hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
+                        if (currentTime > 0 && !isLive) video.currentTime = currentTime;
+                        safePlay(video);
+                    });
+                    hlsInstance.on(Hls.Events.ERROR, errorHandler);
+                    
+                    hlsInstance.on(Hls.Events.FRAG_LOADED, () => {
+                        const bw = hlsInstance.bandwidthEstimate;
+                        if (bw > 0) updateBandwidthDisplay(bw);
+                    });
+                }, 300);
+            }
         } else if (d.type === Hls.ErrorTypes.MEDIA_ERROR) {
             mediaErrCnt++;
             if (mediaErrCnt <= 3) { hlsInstance.recoverMediaError(); }
             else { setTimeout(() => checkAndHandleHEVC(video, url), 1500); }
         } else {
-            setTimeout(() => dom.playerScreen.classList.contains('active') && triggerPlayer(), 3000);
+            setTimeout(() => dom.playerScreen.classList.contains('active') && triggerPlayer(), 2000);
         }
-    });
+    };
+    hlsInstance.on(Hls.Events.ERROR, errorHandler);
 
     // كاشف شاشة سوداء بعد 4 ثوان
     setTimeout(() => checkAndHandleHEVC(video, url), 4000);
@@ -408,9 +572,8 @@ function rebuildAndPlay(primaryUrl, fallbackUrl) {
 }
 
 function fallToProxy(v, url) {
-    console.log('جرب عبر البروكسي...');
-    v.src = `proxy.php?url=${encodeURIComponent(url)}`;
-    v.load(); safePlay(v);
+    console.warn('فشل التشغيل المباشر. تأكد من تفعيل إضافة CORS.');
+    showNotification('خطأ بالتشغيل: تأكد من تفعيل إضافة Allow CORS في المتصفح');
 }
 
 // ===== تحذير HEVC واضح للمستخدم =====
@@ -439,8 +602,8 @@ function playHEVCFallback(video, url) {
     const mp4 = url.replace(/\.m3u8(\?.*)?$/, '.mp4');
     video.src = mp4; video.preload = 'auto';
     video.addEventListener('error', () => {
-        video.src = `proxy.php?url=${encodeURIComponent(url)}`;
-        safePlay(video);
+        console.warn('فشل تشغيل HEVC Fallback');
+        showNotification('خطأ في تشغيل الفيديو.');
     }, { once: true });
     safePlay(video);
 }
@@ -466,6 +629,11 @@ function playWithVideoJS(video, url, isHLS, isMKV, isTS) {
     });
     vjsPlayer.src({ src: url, type: mime });
     vjsPlayer.ready(() => safePlay(vjsPlayer));
+    vjsPlayer.on('ended', () => {
+        if (window._currentPlayerInfo?.type === 'series' && currentPlaylistIndex >= 0 && currentPlaylistIndex < currentPlaylist.length - 1) {
+            playNextEpisode();
+        }
+    });
     vjsPlayer.on('error', () => setTimeout(() => dom.playerScreen.classList.contains('active') && triggerPlayer(), 3000));
 }
 
@@ -474,7 +642,8 @@ function playDirectVideo(video, url) {
     video.src = url; video.preload = 'auto';
     video.addEventListener('loadedmetadata', () => console.log(`VOD ${video.videoWidth}×${video.videoHeight}`), { once: true });
     video.addEventListener('error', () => {
-        if (!video.src.includes('proxy.php')) { video.src = `proxy.php?url=${encodeURIComponent(url)}`; safePlay(video); }
+        console.warn('فشل تشغيل VOD');
+        showNotification('تعذر تشغيل الفيديو. هل إضافة Allow CORS مفعلة؟');
     }, { once: true });
     safePlay(video);
 }
@@ -561,3 +730,35 @@ function showScreen(el) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     el?.classList.add('active');
 }
+
+// ===== إخفاء شريط الإشعارات في وضع ملء الشاشة (للأندرويد) =====
+document.addEventListener('fullscreenchange', () => {
+    if (window.Capacitor && window.Capacitor.Plugins.StatusBar) {
+        if (document.fullscreenElement) {
+            window.Capacitor.Plugins.StatusBar.hide().catch(e => console.warn(e));
+        } else {
+            window.Capacitor.Plugins.StatusBar.show().catch(e => console.warn(e));
+        }
+    }
+});
+
+// ===== دعم الريموت كنترول (TV Remote) =====
+document.addEventListener('keydown', (e) => {
+    // دعم زر OK / Enter للتحديد
+    if (e.key === 'Enter' || e.keyCode === 13) {
+        const active = document.activeElement;
+        // إذا كان العنصر المحدد قابل للضغط وليس مربع نص
+        if (active && active.tagName !== 'INPUT' && typeof active.click === 'function') {
+            active.click();
+            e.preventDefault();
+        }
+    }
+    // دعم زر OK للتشغيل والإيقاف أثناء عرض الفيديو
+    if ((e.key === 'Enter' || e.keyCode === 13) && dom.playerScreen.classList.contains('active')) {
+        const video = document.getElementById('main-video');
+        if (video) {
+            if (video.paused) video.play();
+            else video.pause();
+        }
+    }
+});
