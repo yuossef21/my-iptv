@@ -68,6 +68,11 @@ const server = http.createServer((req, res) => {
             res.end(JSON.stringify({ error: 'Proxy error: ' + err.message }));
         });
 
+        // Kill proxy connection if client closes the browser
+        req.on('close', () => {
+            proxyReq.destroy();
+        });
+
         return;
     }
 

@@ -30,30 +30,48 @@ const CodecSupport = {
     }
 };
 
-// ===== إعدادات HLS مستقرة وآمنة =====
+// ===== إعدادات HLS – أقصى استفادة من الإنترنت =====
 function getHlsConfig(isLive) {
     return {
-        // Buffer آمن جداً لمنع تحميل السيرفر فوق طاقته
-        maxBufferLength: isLive ? 10 : 60,
-        maxMaxBufferLength: isLive ? 20 : 120,
-        maxBufferSize: 60 * 1024 * 1024,
-        
-        // أداء
+        // ===== Buffer أقصى درجة =====
+        maxBufferLength: isLive ? 60 : 120,
+        maxMaxBufferLength: isLive ? 120 : 600,
+        maxBufferSize: 256 * 1024 * 1024,   // 256 MB RAM
+        maxBufferHole: 0.1,
+        highBufferWatchdogPeriod: 3,
+        nudgeMaxRetry: 10,
+
+        // ===== ABR – دائماً أعلى جودة =====
+        startLevel: -1,
+        abrEwmaDefaultEstimate: 60 * 1024 * 1024,    // 60 Mbps
+        abrBandWidthFactor: 0.95,
+        abrBandWidthUpFactor: 0.90,
+        abrMaxWithRealBitrate: true,
+
+        // ===== أداء =====
         enableWorker: true,
+        progressive: true,
         lowLatencyMode: isLive,
-        liveSyncDurationCount: 3,
-        liveMaxLatencyDurationCount: 10,
+        backBufferLength: isLive ? 30 : 120,
+        maxFragLookUpTolerance: 0.1,
 
-        // Retry مستقر
-        manifestLoadingMaxRetry: 5,
-        manifestLoadingRetryDelay: 1000,
-        levelLoadingMaxRetry: 5,
-        levelLoadingRetryDelay: 1000,
+        // ===== Retry محسّن =====
+        manifestLoadingTimeOut: 10000,
+        manifestLoadingMaxRetry: 10,
+        manifestLoadingRetryDelay: 300,
+        levelLoadingTimeOut: 10000,
+        levelLoadingMaxRetry: 10,
+        levelLoadingRetryDelay: 300,
+        fragLoadingTimeOut: 25000,
         fragLoadingMaxRetry: 10,
-        fragLoadingRetryDelay: 1000,
+        fragLoadingRetryDelay: 300,
 
-        // CORS
-        xhrSetup(xhr) { xhr.withCredentials = false; }
+        // ===== CORS =====
+        xhrSetup(xhr) { xhr.withCredentials = false; },
+        fetchSetup(context, initParams) {
+            initParams.credentials = 'omit';
+            return new Request(context.url, initParams);
+        }
     };
 }
 
@@ -74,62 +92,17 @@ const dom = {
     contentTitle: document.getElementById('content-title'),
     playerTitle: document.getElementById('player-title'),
     engineSelect: document.getElementById('engine-select'),
-    historyToggle: document.getElementById('history-toggle'),
 };
 
 // ===== إقلاع =====
-let watchHistory = JSON.parse(localStorage.getItem('iptv_history')) || {};
-
-function isAdultContent(text) {
-    if (!text) return false;
-    const t = text.toLowerCase();
-    return t.includes('18+') || t.includes('+18') || t.includes('xxx') || t.includes('adult') || t.includes('porn') || t.includes('للكبار');
-}
-
-dom.familyToggle?.addEventListener('change', () => {
-    if (currentType) document.querySelector(`.dash-card.${currentType}`)?.click();
-});
-
 document.addEventListener('DOMContentLoaded', async () => {
     await CodecSupport.detect();
     buildEngineOptions();
 
-    // إعدادات الدخول التلقائي
-    const autoUrl = "http://9tv.one:80";
-    const autoUser = "23441138792";
-    const autoPass = "76943549847";
-    
-    api = new XtreamAPI();
-    try {
-        const d = await api.authenticate(autoUrl, autoUser, autoPass);
-        // تم إزالة التنبيه بناءً على طلب المستخدم
-    } catch(e) {}
-    
-    localStorage.setItem('iptv_session', JSON.stringify({ url: autoUrl, username: autoUser, password: autoPass }));
-    
-    showScreen(dom.dashScreen);
-    dom.displayUser.textContent = `مرحباً بك في PRO IPTV`;
-    
-    // الدخول مباشرة لقسم الأفلام لسرعة الوصول
-    setTimeout(() => {
-        document.querySelector('.dash-card.movies')?.click();
-    }, 500);
-
-    // برمجة زر الرجوع للأندرويد
-    if (window.Capacitor && window.Capacitor.Plugins.App) {
-        window.Capacitor.Plugins.App.addListener('backButton', () => {
-            if (document.fullscreenElement) {
-                document.exitFullscreen().catch(()=>{});
-            } else if (dom.playerScreen.classList.contains('active')) {
-                document.getElementById('close-player-btn').click();
-            } else if (dom.seriesModal.classList.contains('active')) {
-                document.getElementById('close-modal-btn').click();
-            } else if (dom.contentView.style.display !== 'none') {
-                document.getElementById('back-to-dash-btn').click();
-            } else if (dom.dashScreen.classList.contains('active') || dom.loginScreen.classList.contains('active')) {
-                window.Capacitor.Plugins.App.exitApp();
-            }
-        });
+    if (localStorage.getItem('iptv_session')) {
+        api = new XtreamAPI();
+        showScreen(dom.dashScreen);
+        dom.displayUser.textContent = `مرحباً، ${api.session.username}`;
     }
 });
 
@@ -185,7 +158,6 @@ document.getElementById('logout-btn').addEventListener('click', () => {
 
 // ===== الأقسام =====
 document.querySelectorAll('.dash-card').forEach(card => {
-    card.setAttribute('tabindex', '0');
     card.addEventListener('click', async () => {
         currentType = card.dataset.type;
         dom.contentTitle.textContent = card.querySelector('h3').textContent;
@@ -208,16 +180,10 @@ function renderCategories(cats) {
     dom.categoriesList.innerHTML = '';
     const wrap = document.createElement('div');
     dom.categoriesList.appendChild(wrap);
-    
-    if (dom.familyToggle?.checked) {
-        cats = cats?.filter(cat => !isAdultContent(cat.category_name)) || [];
-    }
-
     if (!cats?.length) return wrap.innerHTML = '<div class="category-item">لا توجد أقسام</div>';
     cats.forEach((cat, i) => {
         const div = document.createElement('div');
         div.className = 'category-item';
-        div.setAttribute('tabindex', '0');
         div.textContent = cat.category_name;
         div.onclick = () => {
             document.querySelectorAll('.category-item').forEach(el => el.classList.remove('active'));
@@ -232,14 +198,7 @@ function renderCategories(cats) {
 
 async function loadStreams(catId) {
     dom.streamsList.innerHTML = '<h3 style="grid-column:1/-1;text-align:center;">جاري التحميل...</h3>';
-    try { 
-        let streams = await api.getStreams(currentType, catId) || []; 
-        if (dom.familyToggle?.checked) {
-            streams = streams.filter(s => !isAdultContent(s.name) && !isAdultContent(s.title));
-        }
-        allCurrentStreams = streams;
-        renderStreamsList(allCurrentStreams, true); 
-    }
+    try { allCurrentStreams = await api.getStreams(currentType, catId) || []; renderStreamsList(allCurrentStreams, true); }
     catch { dom.streamsList.innerHTML = '<h3 style="color:red;grid-column:1/-1;text-align:center;">خطأ بالتحميل</h3>'; }
 }
 
@@ -249,7 +208,6 @@ function renderStreamsList(arr, isNew = false) {
     arr.slice(displayedCount, displayedCount + CHUNK_SIZE).forEach(s => {
         const card = document.createElement('div');
         card.className = 'stream-card';
-        card.setAttribute('tabindex', '0');
         const icon = s.stream_icon || s.cover || FALLBACK_IMAGE;
         const name = s.name || s.title;
         const id = s.stream_id || s.series_id;
@@ -262,10 +220,6 @@ function renderStreamsList(arr, isNew = false) {
     displayedCount = Math.min(displayedCount, arr.length + CHUNK_SIZE);
     // fix counter
     displayedCount = Math.min(arr.length, displayedCount);
-
-    if (isNew && arr.length > 0) {
-        setTimeout(() => dom.streamsList.querySelector('.stream-card')?.focus(), 100);
-    }
 
     if (displayedCount < arr.length) {
         const s = Object.assign(document.createElement('div'), { style: 'height:20px;grid-column:1/-1' });
@@ -285,11 +239,7 @@ dom.searchInput.addEventListener('input', e => {
         dom.streamsList.innerHTML = '<h3 style="grid-column:1/-1;text-align:center;">جاري البحث...</h3>';
         try {
             if (!globalStreamsCache[currentType]) globalStreamsCache[currentType] = await api.getAllStreams(currentType);
-            let filtered = (globalStreamsCache[currentType] || []).filter(s => (s.name || s.title || '').toLowerCase().includes(term));
-            if (dom.familyToggle?.checked) {
-                filtered = filtered.filter(s => !isAdultContent(s.name) && !isAdultContent(s.title));
-            }
-            renderStreamsList(filtered, true);
+            renderStreamsList((globalStreamsCache[currentType] || []).filter(s => (s.name || s.title || '').toLowerCase().includes(term)), true);
             document.querySelectorAll('.category-item').forEach(el => el.classList.remove('active'));
         } catch { dom.streamsList.innerHTML = '<h3 style="color:red;grid-column:1/-1;text-align:center;">فشل البحث</h3>'; }
     }, 500);
@@ -309,10 +259,9 @@ async function openSeriesModal(sid, stitle) {
         Object.keys(d.episodes).forEach((n, i) => {
             const btn = document.createElement('button');
             btn.className = 'season-btn'; btn.textContent = `موسم ${n}`;
-            btn.setAttribute('tabindex', '0');
             btn.onclick = () => { document.querySelectorAll('.season-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); renderEpisodes(d.episodes[n]); };
             sc.appendChild(btn);
-            if (i === 0) { btn.click(); setTimeout(() => btn.focus(), 100); }
+            if (i === 0) btn.click();
         });
     } catch { sc.innerHTML = '<span style="color:red">فشل جلب تفاصيل المسلسل</span>'; }
 }
@@ -323,7 +272,6 @@ function renderEpisodes(eps) {
     eps.forEach((ep, index) => {
         const card = document.createElement('div');
         card.className = 'episode-card';
-        card.setAttribute('tabindex', '0');
         const title = ep.title || `حلقة ${ep.episode_num}`;
         card.innerHTML = `<h4>${title}</h4><p style="font-size:.8rem;color:#888">${ep.info?.duration || ''}</p>`;
         card.onclick = () => { 
@@ -395,28 +343,6 @@ function triggerPlayer() {
     };
     video.addEventListener('ended', onEnded);
 
-    // حفظ سجل المشاهدة واستئنافه
-    let lastSave = 0;
-    video.addEventListener('timeupdate', () => {
-        if (!dom.historyToggle?.checked || !window._currentPlayerInfo?.streamId || isLive) return;
-        const now = Date.now();
-        if (now - lastSave > 5000 && video.currentTime > 5) {
-            watchHistory[window._currentPlayerInfo.streamId] = video.currentTime;
-            localStorage.setItem('iptv_history', JSON.stringify(watchHistory));
-            lastSave = now;
-        }
-    });
-
-    video.addEventListener('canplay', () => {
-        if (dom.historyToggle?.checked && window._currentPlayerInfo?.streamId && !isLive) {
-            const savedTime = watchHistory[window._currentPlayerInfo.streamId];
-            if (savedTime > 10 && video.currentTime < 5) {
-                video.currentTime = savedTime;
-                showNotification('تم استئناف المشاهدة من حيث توقفت ⏱️');
-            }
-        }
-    }, { once: true });
-
     if (engine === 'videojs') playWithVideoJS(video, url, isHLS, isMKV, isTS);
     else if (engine === 'direct') playDirectVideo(video, url);
     else if (engine === 'hevc_proxy') playHEVCFallback(video, url);
@@ -454,7 +380,7 @@ function playWithHlsJS(video, url, isLive) {
         if (bw > 0) updateBandwidthDisplay(bw);
     });
 
-    let errCnt = 0;
+    let errCnt = 0, mediaErrCnt = 0;
     hlsInstance.on(Hls.Events.ERROR, (_, d) => {
         if (!d.fatal) {
             if (d.details === Hls.ErrorDetails.BUFFER_STALLED_ERROR ||
@@ -463,21 +389,15 @@ function playWithHlsJS(video, url, isLive) {
             }
             return;
         }
-        
-        console.warn('HLS Fatal Error:', d.type, d.details);
         errCnt++;
-        
         if (d.type === Hls.ErrorTypes.NETWORK_ERROR) {
-            if (errCnt <= 10) {
-                setTimeout(() => hlsInstance?.startLoad(), 500);
-            } else {
-                setTimeout(() => dom.playerScreen.classList.contains('active') && triggerPlayer(), 2000);
-            }
+            setTimeout(() => hlsInstance?.startLoad(), Math.min(errCnt * 500, 4000));
         } else if (d.type === Hls.ErrorTypes.MEDIA_ERROR) {
-            if (errCnt <= 5) { hlsInstance.recoverMediaError(); }
+            mediaErrCnt++;
+            if (mediaErrCnt <= 3) { hlsInstance.recoverMediaError(); }
             else { setTimeout(() => checkAndHandleHEVC(video, url), 1500); }
         } else {
-            setTimeout(() => dom.playerScreen.classList.contains('active') && triggerPlayer(), 2000);
+            setTimeout(() => dom.playerScreen.classList.contains('active') && triggerPlayer(), 3000);
         }
     });
 
@@ -681,35 +601,3 @@ function showScreen(el) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     el?.classList.add('active');
 }
-
-// ===== إخفاء شريط الإشعارات في وضع ملء الشاشة (للأندرويد) =====
-document.addEventListener('fullscreenchange', () => {
-    if (window.Capacitor && window.Capacitor.Plugins.StatusBar) {
-        if (document.fullscreenElement) {
-            window.Capacitor.Plugins.StatusBar.hide().catch(e => console.warn(e));
-        } else {
-            window.Capacitor.Plugins.StatusBar.show().catch(e => console.warn(e));
-        }
-    }
-});
-
-// ===== دعم الريموت كنترول (TV Remote) =====
-document.addEventListener('keydown', (e) => {
-    // دعم زر OK / Enter للتحديد
-    if (e.key === 'Enter' || e.keyCode === 13) {
-        const active = document.activeElement;
-        // إذا كان العنصر المحدد قابل للضغط وليس مربع نص
-        if (active && active.tagName !== 'INPUT' && typeof active.click === 'function') {
-            active.click();
-            e.preventDefault();
-        }
-    }
-    // دعم زر OK للتشغيل والإيقاف أثناء عرض الفيديو
-    if ((e.key === 'Enter' || e.keyCode === 13) && dom.playerScreen.classList.contains('active')) {
-        const video = document.getElementById('main-video');
-        if (video) {
-            if (video.paused) video.play();
-            else video.pause();
-        }
-    }
-});
