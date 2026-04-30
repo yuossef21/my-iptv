@@ -5,7 +5,7 @@
   ],
   "functions": {
     "api/proxy.js": {
-      "maxDuration": 300,
+      "maxDuration": 300, // 5 minutes for streaming
       "memory": 1024
     }
   },
@@ -14,7 +14,8 @@
       "source": "/api/(.*)",
       "headers": [
         { "key": "Access-Control-Allow-Origin", "value": "*" },
-        { "key": "Access-Control-Allow-Methods", "value": "GET, HEAD, OPTIONS" }
+        { "key": "Access-Control-Allow-Methods", "value": "GET, HEAD, OPTIONS, POST" },
+        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Range, Accept, Origin, Authorization" }
       ]
     },
     {

@@ -1,11 +1,12 @@
-// src/api.js - Direct without proxy (test)
+// src/api.js - All requests go through proxy to avoid CORS/mixed content
 
-export function proxyImg(url) {
+// Proxy URL for Vercel serverless function
+const PROXY_PATH = '/api/proxy';
+
+export function proxyUrl(url) {
   if (!url) return null;
-  if (url.startsWith('http://')) {
-    return 'https://' + url.substring(7);
-  }
-  return url;
+  // Always proxy through our Vercel function to avoid CORS issues
+  return `${PROXY_PATH}?url=${encodeURIComponent(url)}`;
 }
 
 export class XtreamAPI {
@@ -14,7 +15,8 @@ export class XtreamAPI {
   }
 
   buildUrl(action, extraParams = '') {
-    return `${this.session.url}/player_api.php?username=${this.session.username}&password=${this.session.password}&action=${action}${extraParams}`;
+    const target = `${this.session.url}/player_api.php?username=${this.session.username}&password=${this.session.password}&action=${action}${extraParams}`;
+    return proxyUrl(target);
   }
 
   getStreamUrl(type, streamId, extension = 'm3u8') {
@@ -24,10 +26,7 @@ export class XtreamAPI {
     else if (type === 'series') direct = `${url}/series/${username}/${password}/${streamId}.${extension}`;
     else direct = `${url}/movie/${username}/${password}/${streamId}.${extension}`;
     
-    if (direct.startsWith('http://')) {
-      return 'https://' + direct.substring(7);
-    }
-    return direct;
+    return proxyUrl(direct);
   }
 
   async fetchAPI(url) {
@@ -46,7 +45,7 @@ export class XtreamAPI {
 
   async authenticate(url, user, pass) {
     const target = `${url}/player_api.php?username=${user}&password=${pass}`;
-    return this.fetchAPI(target);
+    return this.fetchAPI(proxyUrl(target));
   }
 
   async getCategories(type) {
