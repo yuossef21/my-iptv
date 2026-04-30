@@ -5,7 +5,7 @@
   ],
   "functions": {
     "api/proxy.js": {
-      "maxDuration": 300, // 5 minutes for streaming
+      "maxDuration": 300,
       "memory": 1024
     }
   },
