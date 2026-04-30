@@ -1,8 +1,10 @@
 // src/api.js
 
+const PROXY_URL = 'https://iptv-proxy.yuossefmohammed575.workers.dev';
+
 export function proxyImg(url) {
   if (!url) return null;
-  if (url.startsWith('http://')) return `/api/proxy?url=${encodeURIComponent(url)}`;
+  if (url.startsWith('http://')) return `${PROXY_URL}?url=${encodeURIComponent(url)}`;
   return url;
 }
 
@@ -13,7 +15,7 @@ export class XtreamAPI {
 
   buildUrl(action, extraParams = '') {
     const target = `${this.session.url}/player_api.php?username=${this.session.username}&password=${this.session.password}&action=${action}${extraParams}`;
-    return `/api/proxy?url=${encodeURIComponent(target)}`;
+    return `${PROXY_URL}?url=${encodeURIComponent(target)}`;
   }
 
   getStreamUrl(type, streamId, extension = 'm3u8') {
@@ -43,7 +45,7 @@ export class XtreamAPI {
 
   async authenticate(url, user, pass) {
     const target = `${url}/player_api.php?username=${user}&password=${pass}`;
-    return this.fetchAPI(`/api/proxy?url=${encodeURIComponent(target)}`);
+    return this.fetchAPI(`${PROXY_URL}?url=${encodeURIComponent(target)}`);
   }
 
   async getCategories(type) {
