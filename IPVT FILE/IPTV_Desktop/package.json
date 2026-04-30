@@ -1,0 +1,23 @@
+{
+  "name": "iptv-desktop",
+  "version": "1.0.0",
+  "description": "PRO IPTV Senior Edition Desktop App",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^29.1.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.iptv.desktop",
+    "win": {
+      "target": "nsis"
+    }
+  }
+}

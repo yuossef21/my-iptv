@@ -1,0 +1,106 @@
+// api/proxy.js — Vercel Serverless Function
+// بروكسي للـ API والصور (الفيديو مباشر)
+
+export const config = {
+  api: { responseLimit: false, bodyParser: false },
+};
+
+export default async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Range, Accept, Origin');
+  res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Accept-Ranges');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
+  const { url: rawUrl, type } = req.query;
+
+  if (!rawUrl) {
+    return res.status(400).json({ error: 'Missing url parameter' });
+  }
+
+  let targetUrl;
+  try {
+    targetUrl = decodeURIComponent(rawUrl);
+    new URL(targetUrl);
+  } catch {
+    return res.status(400).json({ error: 'Invalid URL' });
+  }
+
+  const headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+    'Accept': '*/*',
+    'Connection': 'keep-alive',
+  };
+
+  if (req.headers['range']) {
+    headers['Range'] = req.headers['range'];
+  }
+
+  try {
+    if (type === 'stream') {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Headers', 'Range, Content-Length, Content-Type');
+      res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Accept-Ranges');
+      
+      const response = await fetch(targetUrl, { headers, redirect: 'follow' });
+      
+      res.status(response.status);
+      ['content-type','content-length','content-range','accept-ranges','cache-control'].forEach(k => {
+        const v = response.headers.get(k);
+        if (v) res.setHeader(k, v);
+      });
+      
+      if (response.body) {
+        for await (const chunk of response.body) {
+          res.write(chunk);
+        }
+      }
+      return res.end();
+    }
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+
+    const response = await fetch(targetUrl, {
+      headers,
+      signal: controller.signal,
+      redirect: 'follow',
+    });
+
+    clearTimeout(timeout);
+
+    if (!response.ok) {
+      return res.status(response.status).json({
+        error: `Upstream returned ${response.status}`
+      });
+    }
+
+    const contentType = response.headers.get('content-type') || '';
+
+    // نسخ headers
+    ['content-type', 'content-length', 'cache-control'].forEach(h => {
+      const value = response.headers.get(h);
+      if (value) res.setHeader(h, value);
+    });
+
+    // للصور: إرجاع binary
+    if (contentType.includes('image/')) {
+      const buffer = await response.arrayBuffer();
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+      return res.status(200).send(Buffer.from(buffer));
+    }
+
+    // للنصوص و JSON
+    const text = await response.text();
+    return res.status(200).send(text);
+
+  } catch (err) {
+    console.error('Proxy error:', err.message);
+    return res.status(err.name === 'AbortError' ? 504 : 502).json({
+      error: err.message || 'Proxy failed'
+    });
+  }
+}
