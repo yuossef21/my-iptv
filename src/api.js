@@ -20,13 +20,12 @@ export class XtreamAPI {
 
   getStreamUrl(type, streamId, extension = 'm3u8') {
     const { url, username, password } = this.session;
-    if (type === 'live') {
-      return `${url}/live/${username}/${password}/${streamId}.${extension}`;
-    } else if (type === 'series') {
-      return `${url}/series/${username}/${password}/${streamId}.${extension}`;
-    } else {
-      return `${url}/movie/${username}/${password}/${streamId}.${extension}`;
-    }
+    let direct;
+    if (type === 'live') direct = `${url}/live/${username}/${password}/${streamId}.${extension}`;
+    else if (type === 'series') direct = `${url}/series/${username}/${password}/${streamId}.${extension}`;
+    else direct = `${url}/movie/${username}/${password}/${streamId}.${extension}`;
+    
+    return `${PROXY_URL}?url=${encodeURIComponent(direct)}`;
   }
 
   async fetchAPI(url) {
