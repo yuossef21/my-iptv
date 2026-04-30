@@ -2,10 +2,18 @@
 
 const PROXY_URL = 'https://iptv-proxy.yuossefmohammed575.workers.dev';
 
+function toProxyUrl(targetUrl) {
+  if (!targetUrl) return targetUrl;
+  let url = targetUrl;
+  if (url.startsWith('http://')) {
+    url = 'https://' + url.substring(7);
+  }
+  return `${PROXY_URL}?url=${encodeURIComponent(url)}`;
+}
+
 export function proxyImg(url) {
   if (!url) return null;
-  if (url.startsWith('http://')) return `${PROXY_URL}?url=${encodeURIComponent(url)}`;
-  return url;
+  return toProxyUrl(url);
 }
 
 export class XtreamAPI {
@@ -15,7 +23,7 @@ export class XtreamAPI {
 
   buildUrl(action, extraParams = '') {
     const target = `${this.session.url}/player_api.php?username=${this.session.username}&password=${this.session.password}&action=${action}${extraParams}`;
-    return `${PROXY_URL}?url=${encodeURIComponent(target)}`;
+    return toProxyUrl(target);
   }
 
   getStreamUrl(type, streamId, extension = 'm3u8') {
@@ -25,7 +33,7 @@ export class XtreamAPI {
     else if (type === 'series') direct = `${url}/series/${username}/${password}/${streamId}.${extension}`;
     else direct = `${url}/movie/${username}/${password}/${streamId}.${extension}`;
     
-    return `${PROXY_URL}?url=${encodeURIComponent(direct)}`;
+    return toProxyUrl(direct);
   }
 
   async fetchAPI(url) {
@@ -44,7 +52,7 @@ export class XtreamAPI {
 
   async authenticate(url, user, pass) {
     const target = `${url}/player_api.php?username=${user}&password=${pass}`;
-    return this.fetchAPI(`${PROXY_URL}?url=${encodeURIComponent(target)}`);
+    return this.fetchAPI(toProxyUrl(target));
   }
 
   async getCategories(type) {
