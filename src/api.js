@@ -1,13 +1,7 @@
-// src/api.js — كل طلبات الشبكة تمر عبر /api/proxy لحل Mixed Content
+// src/api.js
 
 export function proxyImg(url) {
   if (!url) return null;
-  if (url.startsWith('http://')) return `/api/proxy?url=${encodeURIComponent(url)}`;
-  return url;
-}
-
-export function proxyStream(url) {
-  if (!url) return url;
   if (url.startsWith('http://')) return `/api/proxy?url=${encodeURIComponent(url)}`;
   return url;
 }
@@ -24,11 +18,13 @@ export class XtreamAPI {
 
   getStreamUrl(type, streamId, extension = 'm3u8') {
     const { url, username, password } = this.session;
-    let direct;
-    if (type === 'live')   direct = `${url}/live/${username}/${password}/${streamId}.${extension}`;
-    else if (type === 'series') direct = `${url}/series/${username}/${password}/${streamId}.${extension}`;
-    else direct = `${url}/movie/${username}/${password}/${streamId}.${extension}`;
-    return `/api/proxy?url=${encodeURIComponent(direct)}`;
+    if (type === 'live') {
+      return `${url}/live/${username}/${password}/${streamId}.${extension}`;
+    } else if (type === 'series') {
+      return `${url}/series/${username}/${password}/${streamId}.${extension}`;
+    } else {
+      return `${url}/movie/${username}/${password}/${streamId}.${extension}`;
+    }
   }
 
   async fetchAPI(url) {

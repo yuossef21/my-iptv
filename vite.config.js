@@ -29,7 +29,7 @@ function localProxyMiddleware() {
           if (req.headers.range) headers['Range'] = req.headers.range
 
           const controller = new AbortController()
-          const timeout = setTimeout(() => controller.abort(), 25000)
+          const timeout = setTimeout(() => controller.abort(), 30000)
 
           const response = await fetch(targetUrl, {
             headers,
@@ -42,7 +42,7 @@ function localProxyMiddleware() {
           const isM3U8 = contentType.includes('mpegurl') || contentType.includes('m3u') ||
                          targetUrl.includes('.m3u8') || targetUrl.includes('.m3u')
 
-          ['content-type','content-length','content-range','accept-ranges','cache-control'].forEach(h => {
+          ['content-type', 'content-length', 'content-range', 'accept-ranges', 'cache-control'].forEach(h => {
             const v = response.headers.get(h)
             if (v) res.setHeader(h, v)
           })
@@ -56,6 +56,13 @@ function localProxyMiddleware() {
               return `/api/proxy?url=${encodeURIComponent(baseUrl + match)}`
             })
             return res.end(text)
+          }
+
+          if (response.body) {
+            for await (const chunk of response.body) {
+              res.write(chunk)
+            }
+            return res.end()
           }
 
           const buf = await response.arrayBuffer()

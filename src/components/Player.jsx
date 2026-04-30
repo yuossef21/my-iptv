@@ -3,9 +3,13 @@ import { useEffect, useRef, useState } from 'react';
 function getHlsConfig(isLive) {
   return {
 <<<<<<< HEAD
+<<<<<<< HEAD
     // ===== Buffer أقصى درجة =====
 =======
 >>>>>>> d717c4cbf0fe3c811a53c559473125ca3c507e03
+=======
+    // ===== Buffer أقصى درجة =====
+>>>>>>> a032aa56069dea947b114b69c3be7c01376db21a
     maxBufferLength:           isLive ? 60  : 120,
     maxMaxBufferLength:        isLive ? 120 : 600,
     maxBufferSize:             256 * 1024 * 1024,
@@ -13,26 +17,39 @@ function getHlsConfig(isLive) {
     highBufferWatchdogPeriod:  3,
     nudgeMaxRetry:             10,
 <<<<<<< HEAD
+<<<<<<< HEAD
 
     // ===== ABR – دائماً أعلى جودة =====
 =======
 >>>>>>> d717c4cbf0fe3c811a53c559473125ca3c507e03
+=======
+
+    // ===== ABR – دائماً أعلى جودة =====
+>>>>>>> a032aa56069dea947b114b69c3be7c01376db21a
     startLevel:                -1,
     abrEwmaDefaultEstimate:    60 * 1024 * 1024,
     abrBandWidthFactor:        0.95,
     abrBandWidthUpFactor:      0.90,
     abrMaxWithRealBitrate:     true,
 <<<<<<< HEAD
+<<<<<<< HEAD
 
     // ===== أداء =====
 =======
 >>>>>>> d717c4cbf0fe3c811a53c559473125ca3c507e03
+=======
+
+    // ===== أداء =====
+>>>>>>> a032aa56069dea947b114b69c3be7c01376db21a
     enableWorker:              true,
     progressive:               true,
     lowLatencyMode:            isLive,
     backBufferLength:          isLive ? 30 : 120,
     maxFragLookUpTolerance:    0.1,
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> a032aa56069dea947b114b69c3be7c01376db21a
 
     // ===== Retry =====
     manifestLoadingTimeOut:    15000,
@@ -54,6 +71,7 @@ function getHlsConfig(isLive) {
       initParams.mode = 'cors';
       return new Request(context.url, initParams);
     },
+<<<<<<< HEAD
 =======
     manifestLoadingTimeOut:    10000,
     manifestLoadingMaxRetry:   10,
@@ -67,6 +85,8 @@ function getHlsConfig(isLive) {
     xhrSetup(xhr)         { xhr.withCredentials = false; },
     fetchSetup(ctx, init) { init.credentials = 'omit'; return new Request(ctx.url, init); },
 >>>>>>> d717c4cbf0fe3c811a53c559473125ca3c507e03
+=======
+>>>>>>> a032aa56069dea947b114b69c3be7c01376db21a
   };
 }
 
@@ -81,16 +101,22 @@ export default function Player({ streamUrl, title, onClose }) {
   const [buffering, setBuffering] = useState(true);
   const [hevcWarn, setHevcWarn]   = useState(false);
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> a032aa56069dea947b114b69c3be7c01376db21a
   const [errMsg, setErrMsg]       = useState('');
 
   useEffect(() => {
     if (!streamUrl || !videoRef.current) return;
     setErrMsg('');
+<<<<<<< HEAD
 =======
 
   useEffect(() => {
     if (!streamUrl || !videoRef.current) return;
 >>>>>>> d717c4cbf0fe3c811a53c559473125ca3c507e03
+=======
+>>>>>>> a032aa56069dea947b114b69c3be7c01376db21a
     initPlayer();
     return destroyPlayer;
   }, [streamUrl, engine]);
@@ -103,6 +129,9 @@ export default function Player({ streamUrl, title, onClose }) {
   }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> a032aa56069dea947b114b69c3be7c01376db21a
   function initPlayer() {
     destroyPlayer();
     const video = videoRef.current;
@@ -113,6 +142,7 @@ export default function Player({ streamUrl, title, onClose }) {
     const isVOD  = url.includes('/movie/') || url.includes('/series/');
     const ext    = url.split('.').pop().toLowerCase().split('?')[0];
     const isHLS  = ext === 'm3u8' || ext === 'm3u';
+<<<<<<< HEAD
 =======
   // streamUrl يأتي دائماً كـ /api/proxy?url=... من api.js
   // لذلك لا مشكلة Mixed Content
@@ -128,6 +158,8 @@ export default function Player({ streamUrl, title, onClose }) {
     const ext        = innerUrl.split('.').pop().toLowerCase().split('?')[0];
     const isHLS      = ext === 'm3u8' || ext === 'm3u';
 >>>>>>> d717c4cbf0fe3c811a53c559473125ca3c507e03
+=======
+>>>>>>> a032aa56069dea947b114b69c3be7c01376db21a
 
     setBuffering(true); setHevcWarn(false); setBw(null); setQuality('');
     attachBufferEvents(video);
@@ -136,6 +168,9 @@ export default function Player({ streamUrl, title, onClose }) {
       playDirect(video, url);
     } else if (engine === 'hevc_proxy') {
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> a032aa56069dea947b114b69c3be7c01376db21a
       // للـ 4K: جرب نسخة mp4
       const mp4 = url.replace(/\.m3u8(\?.*)?$/, '.mp4');
       playDirect(video, mp4, url);
@@ -151,6 +186,7 @@ export default function Player({ streamUrl, title, onClose }) {
         playDirect(video, url);
       } else {
         playHlsJS(video, url, isLive);
+<<<<<<< HEAD
 =======
       playHEVCFallback(video, url, innerUrl);
     } else {
@@ -165,22 +201,30 @@ export default function Player({ streamUrl, title, onClose }) {
       } else {
         playHlsJS(video, url, isLive, innerUrl);
 >>>>>>> d717c4cbf0fe3c811a53c559473125ca3c507e03
+=======
+>>>>>>> a032aa56069dea947b114b69c3be7c01376db21a
       }
     }
   }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> a032aa56069dea947b114b69c3be7c01376db21a
   function playHlsJS(video, url, isLive) {
     const Hls = window.Hls;
     const hls = new Hls(getHlsConfig(isLive));
     hlsRef.current = hls;
 
+<<<<<<< HEAD
 =======
   function playHlsJS(video, url, isLive, innerUrl) {
     const Hls = window.Hls;
     const hls = new Hls(getHlsConfig(isLive));
     hlsRef.current = hls;
 >>>>>>> d717c4cbf0fe3c811a53c559473125ca3c507e03
+=======
+>>>>>>> a032aa56069dea947b114b69c3be7c01376db21a
     hls.loadSource(url);
     hls.attachMedia(video);
 
@@ -188,13 +232,19 @@ export default function Player({ streamUrl, title, onClose }) {
       const lvls = hls.levels;
       const top  = lvls[lvls.length - 1];
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> a032aa56069dea947b114b69c3be7c01376db21a
 
       // قفل على أعلى جودة
       hls.currentLevel = hls.loadLevel = hls.nextAutoLevel = lvls.length - 1;
 
+<<<<<<< HEAD
 =======
       hls.currentLevel = hls.loadLevel = hls.nextAutoLevel = lvls.length - 1;
 >>>>>>> d717c4cbf0fe3c811a53c559473125ca3c507e03
+=======
+>>>>>>> a032aa56069dea947b114b69c3be7c01376db21a
       if (top?.height) {
         const lbl = top.height>=2160?'4K UHD':top.height>=1080?'FHD 1080p':top.height>=720?'HD 720p':`${top.height}p`;
         setQuality(lbl);
@@ -205,6 +255,9 @@ export default function Player({ streamUrl, title, onClose }) {
     hls.on(Hls.Events.FRAG_LOADED, () => {
       const b = hls.bandwidthEstimate;
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> a032aa56069dea947b114b69c3be7c01376db21a
       if (b > 0) setBw((b / 1024 / 1024).toFixed(1));
     });
 
@@ -240,6 +293,7 @@ export default function Player({ streamUrl, title, onClose }) {
       setHevcWarn(true);
       const mp4 = url.replace(/\.m3u8(\?.*)?$/, '.mp4');
       rebuildPlay(video, mp4, url);
+<<<<<<< HEAD
 =======
       if (b > 0) setBw((b/1024/1024).toFixed(1));
     });
@@ -267,22 +321,32 @@ export default function Player({ streamUrl, title, onClose }) {
       const mp4proxy = `/api/proxy?url=${encodeURIComponent(mp4inner)}`;
       rebuildPlay(video, mp4proxy, proxyUrl);
 >>>>>>> d717c4cbf0fe3c811a53c559473125ca3c507e03
+=======
+>>>>>>> a032aa56069dea947b114b69c3be7c01376db21a
     }
   }
 
   function rebuildPlay(video, primary, fallback) {
     destroyPlayer();
 <<<<<<< HEAD
+<<<<<<< HEAD
     video.src = primary;
     video.load();
 =======
     video.src = primary; video.load();
 >>>>>>> d717c4cbf0fe3c811a53c559473125ca3c507e03
+=======
+    video.src = primary;
+    video.load();
+>>>>>>> a032aa56069dea947b114b69c3be7c01376db21a
     video.addEventListener('loadedmetadata', () => {
       if (video.videoWidth > 0) safePlay(video);
       else { video.src = fallback; video.load(); safePlay(video); }
     }, { once: true });
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> a032aa56069dea947b114b69c3be7c01376db21a
     video.addEventListener('error', () => {
       video.src = fallback; video.load(); safePlay(video);
     }, { once: true });
@@ -293,6 +357,7 @@ export default function Player({ streamUrl, title, onClose }) {
     video.src = url;
     video.addEventListener('error', () => {
       if (fallback) { video.src = fallback; safePlay(video); }
+<<<<<<< HEAD
 =======
     video.addEventListener('error', () => { video.src = fallback; video.load(); safePlay(video); }, { once: true });
     safePlay(video);
@@ -314,11 +379,14 @@ export default function Player({ streamUrl, title, onClose }) {
         video.src = `/api/proxy?url=${encodeURIComponent(url)}`; safePlay(video);
       }
 >>>>>>> d717c4cbf0fe3c811a53c559473125ca3c507e03
+=======
+>>>>>>> a032aa56069dea947b114b69c3be7c01376db21a
     }, { once: true });
     safePlay(video);
   }
 
   function attachBufferEvents(video) {
+<<<<<<< HEAD
 <<<<<<< HEAD
     video.addEventListener('waiting', () => setBuffering(true));
     video.addEventListener('playing', () => setBuffering(false));
@@ -328,6 +396,11 @@ export default function Player({ streamUrl, title, onClose }) {
     video.addEventListener('playing', ()=>setBuffering(false));
     video.addEventListener('canplay', ()=>setBuffering(false), { once: true });
 >>>>>>> d717c4cbf0fe3c811a53c559473125ca3c507e03
+=======
+    video.addEventListener('waiting', () => setBuffering(true));
+    video.addEventListener('playing', () => setBuffering(false));
+    video.addEventListener('canplay', () => setBuffering(false), { once: true });
+>>>>>>> a032aa56069dea947b114b69c3be7c01376db21a
   }
 
   function safePlay(v) {
@@ -337,11 +410,15 @@ export default function Player({ streamUrl, title, onClose }) {
 
   function toggleFullscreen() {
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> a032aa56069dea947b114b69c3be7c01376db21a
     if (!document.fullscreenElement) containerRef.current?.requestFullscreen().catch(() => {});
     else document.exitFullscreen();
   }
 
   const qualityColor = quality.includes('4K') ? '#f59e0b' : quality.includes('FHD') ? '#60a5fa' : '#94a3b8';
+<<<<<<< HEAD
 =======
     if (!document.fullscreenElement) containerRef.current?.requestFullscreen().catch(()=>{});
     else document.exitFullscreen();
@@ -349,11 +426,16 @@ export default function Player({ streamUrl, title, onClose }) {
 
   const qualityColor = quality.includes('4K')?'#f59e0b':quality.includes('FHD')?'#60a5fa':'#94a3b8';
 >>>>>>> d717c4cbf0fe3c811a53c559473125ca3c507e03
+=======
+>>>>>>> a032aa56069dea947b114b69c3be7c01376db21a
 
   return (
     <div className="player-screen">
       <header className="player-header">
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> a032aa56069dea947b114b69c3be7c01376db21a
         <button className="btn-ghost" onClick={onClose} style={{ flexShrink: 0 }}>⬅ إغلاق</button>
         <span className="player-title">{title}</span>
         <div style={{ display:'flex', alignItems:'center', gap:8, flexShrink:0 }}>
@@ -366,6 +448,7 @@ export default function Player({ streamUrl, title, onClose }) {
             <label>المحرك:</label>
             <select value={engine} onChange={e => setEngine(e.target.value)}>
               <option value="hlsjs">⚡ Hls.js (موصى به)</option>
+<<<<<<< HEAD
 =======
         <button className="btn-ghost" onClick={onClose} style={{flexShrink:0}}>⬅ إغلاق</button>
         <span className="player-title">{title}</span>
@@ -376,6 +459,8 @@ export default function Player({ streamUrl, title, onClose }) {
             <select value={engine} onChange={e=>setEngine(e.target.value)}>
               <option value="hlsjs">⚡ Hls.js</option>
 >>>>>>> d717c4cbf0fe3c811a53c559473125ca3c507e03
+=======
+>>>>>>> a032aa56069dea947b114b69c3be7c01376db21a
               <option value="direct">🔗 مباشر</option>
               <option value="hevc_proxy">🔴 4K HEVC</option>
             </select>
@@ -385,6 +470,9 @@ export default function Player({ streamUrl, title, onClose }) {
 
       <div ref={containerRef} className="player-container" onDoubleClick={toggleFullscreen}>
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> a032aa56069dea947b114b69c3be7c01376db21a
         <video
           ref={videoRef}
           id="main-video"
@@ -403,6 +491,7 @@ export default function Player({ streamUrl, title, onClose }) {
             <div style={{ textAlign:'center' }}>
               <div className="spinner" />
               <div style={{ color:'#fff', fontSize:14, marginTop:8 }}>جاري التحميل…</div>
+<<<<<<< HEAD
 =======
         <video ref={videoRef} id="main-video" controls preload="auto"
           style={{width:'100%',height:'100%',objectFit:'contain',background:'#000'}}
@@ -417,11 +506,16 @@ export default function Player({ streamUrl, title, onClose }) {
               <div className="spinner"/>
               <div style={{color:'#fff',fontSize:14,marginTop:8}}>جاري التحميل…</div>
 >>>>>>> d717c4cbf0fe3c811a53c559473125ca3c507e03
+=======
+>>>>>>> a032aa56069dea947b114b69c3be7c01376db21a
             </div>
           </div>
         )}
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> a032aa56069dea947b114b69c3be7c01376db21a
         {/* رسالة خطأ مؤقتة */}
         {errMsg && (
           <div style={{
@@ -437,6 +531,7 @@ export default function Player({ streamUrl, title, onClose }) {
             <strong>⚠️ البث 4K يستخدم H.265/HEVC</strong><br />
             يتم محاولة H.264 تلقائياً…<br />
             <small style={{ opacity:.85 }}>للحل الدائم: استخدم <b>Edge</b> أو <b>Safari</b></small>
+<<<<<<< HEAD
 =======
         {hevcWarn && (
           <div id="hevc-warning">
@@ -444,6 +539,8 @@ export default function Player({ streamUrl, title, onClose }) {
             يتم محاولة H.264 تلقائياً…<br/>
             <small style={{opacity:.85}}>للحل الدائم: استخدم <b>Edge</b> أو <b>Safari</b></small>
 >>>>>>> d717c4cbf0fe3c811a53c559473125ca3c507e03
+=======
+>>>>>>> a032aa56069dea947b114b69c3be7c01376db21a
           </div>
         )}
       </div>

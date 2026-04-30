@@ -6,9 +6,12 @@ import ContentView  from './components/ContentView';
 import Player       from './components/Player';
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 // تحميل Hls.js من CDN (أخف من npm)
 >>>>>>> d717c4cbf0fe3c811a53c559473125ca3c507e03
+=======
+>>>>>>> a032aa56069dea947b114b69c3be7c01376db21a
 function loadHlsScript() {
   if (window.Hls) return Promise.resolve();
   return new Promise((res, rej) => {
@@ -21,6 +24,9 @@ function loadHlsScript() {
 
 export default function App() {
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> a032aa56069dea947b114b69c3be7c01376db21a
   const [session, setSession]         = useState(null);
   const [api, setApi]                 = useState(null);
   const [screen, setScreen]           = useState('login');
@@ -40,6 +46,7 @@ export default function App() {
 
   function handleLogin(s) {
     setSession(s); setApi(new XtreamAPI(s)); setScreen('dashboard');
+<<<<<<< HEAD
 =======
   const [session, setSession]   = useState(null);
   const [api, setApi]           = useState(null);
@@ -64,10 +71,13 @@ export default function App() {
     setApi(new XtreamAPI(s));
     setScreen('dashboard');
 >>>>>>> d717c4cbf0fe3c811a53c559473125ca3c507e03
+=======
+>>>>>>> a032aa56069dea947b114b69c3be7c01376db21a
   }
 
   function handleLogout() {
     localStorage.removeItem('iptv_session');
+<<<<<<< HEAD
 <<<<<<< HEAD
     setSession(null); setApi(null); setScreen('login');
 =======
@@ -79,6 +89,9 @@ export default function App() {
     setContentType(type);
     setScreen('content');
 >>>>>>> d717c4cbf0fe3c811a53c559473125ca3c507e03
+=======
+    setSession(null); setApi(null); setScreen('login');
+>>>>>>> a032aa56069dea947b114b69c3be7c01376db21a
   }
 
   function handlePlay(streamId, title, extension, type) {
@@ -88,6 +101,9 @@ export default function App() {
   }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> a032aa56069dea947b114b69c3be7c01376db21a
   return (
     <div style={{ height:'100vh', display:'flex', flexDirection:'column' }}>
       {screen === 'login'     && <LoginScreen onLogin={handleLogin} />}
@@ -98,6 +114,7 @@ export default function App() {
       )}
       {screen === 'player' && playerInfo && (
         <Player streamUrl={playerInfo.url} title={playerInfo.title} onClose={()=>{setPlayerInfo(null);setScreen('content');}} />
+<<<<<<< HEAD
 =======
   function handleClosePlayer() {
     setPlayerInfo(null);
@@ -136,6 +153,8 @@ export default function App() {
           onClose={handleClosePlayer}
         />
 >>>>>>> d717c4cbf0fe3c811a53c559473125ca3c507e03
+=======
+>>>>>>> a032aa56069dea947b114b69c3be7c01376db21a
       )}
     </div>
   );

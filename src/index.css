@@ -217,6 +217,9 @@ select { background: #13162299; cursor: pointer; }
   flex:1; padding:14px; overflow-y:auto;
   display:grid;
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> a032aa56069dea947b114b69c3be7c01376db21a
   grid-template-columns:repeat(auto-fill, minmax(180px,1fr));
   gap:16px; align-content:start;
 }
@@ -225,6 +228,7 @@ select { background: #13162299; cursor: pointer; }
 }
 @media (max-width:480px) {
   .streams-area { grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); padding:10px; gap:10px; }
+<<<<<<< HEAD
 =======
   grid-template-columns:repeat(auto-fill, minmax(130px,1fr));
   gap:12px; align-content:start;
@@ -232,6 +236,8 @@ select { background: #13162299; cursor: pointer; }
 @media (max-width:480px) {
   .streams-area { grid-template-columns:repeat(auto-fill,minmax(100px,1fr)); padding:10px; gap:8px; }
 >>>>>>> d717c4cbf0fe3c811a53c559473125ca3c507e03
+=======
+>>>>>>> a032aa56069dea947b114b69c3be7c01376db21a
 }
 
 .stream-card {
@@ -242,6 +248,9 @@ select { background: #13162299; cursor: pointer; }
 .stream-card:hover { transform:scale(1.04); box-shadow:0 8px 20px rgba(0,0,0,.5); border-color:var(--primary); }
 .stream-card:active { transform:scale(.97); }
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> a032aa56069dea947b114b69c3be7c01376db21a
 .stream-card img { width:100%; aspect-ratio:2/3; object-fit:cover; background:#0b0c10; display:block; }
 .stream-card-name {
   padding:10px 12px;
@@ -255,11 +264,14 @@ select { background: #13162299; cursor: pointer; }
   -webkit-line-clamp:2;
   -webkit-box-orient:vertical;
 }
+<<<<<<< HEAD
 =======
 .stream-card img { width:100%; height:180px; object-fit:cover; background:#0b0c10; display:block; }
 @media (max-width:480px) { .stream-card img { height:130px; } }
 .stream-card-name { padding:7px 9px; font-size:11px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 >>>>>>> d717c4cbf0fe3c811a53c559473125ca3c507e03
+=======
+>>>>>>> a032aa56069dea947b114b69c3be7c01376db21a
 
 .status-msg { grid-column:1/-1; display:flex; flex-direction:column; align-items:center; padding:40px; color:var(--muted); font-size:15px; }
 
