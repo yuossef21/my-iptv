@@ -1,5 +1,4 @@
 // api/proxy.js — Vercel Serverless Function
-// بروكسي للـ API والصور (الفيديو مباشر)
 
 export const config = {
   api: { responseLimit: false, bodyParser: false },
@@ -15,44 +14,39 @@ export default async function handler(req, res) {
     return res.status(200).end();
   }
 
-  const { url: rawUrl, type } = req.query;
+  const { url, type } = req.query;
 
-  if (!rawUrl) {
-    return res.status(400).json({ error: 'Missing url parameter' });
+  if (!url) {
+    return res.status(400).json({ error: 'No URL provided' });
   }
 
   let targetUrl;
   try {
-    targetUrl = decodeURIComponent(rawUrl);
+    targetUrl = decodeURIComponent(url);
     new URL(targetUrl);
   } catch {
     return res.status(400).json({ error: 'Invalid URL' });
   }
 
-  const headers = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-    'Accept': '*/*',
-    'Connection': 'keep-alive',
-  };
-
-  if (req.headers['range']) {
-    headers['Range'] = req.headers['range'];
-  }
-
   try {
+    const headers = {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      'Accept': '*/*',
+      'Accept-Language': 'ar,en;q=0.9',
+      'Connection': 'keep-alive',
+    };
+
+    if (req.headers.range) {
+      headers['Range'] = req.headers.range;
+    }
+
     if (type === 'stream') {
-      res.setHeader('Access-Control-Allow-Origin', '*');
-      res.setHeader('Access-Control-Allow-Headers', 'Range, Content-Length, Content-Type');
-      res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Accept-Ranges');
-      
       const response = await fetch(targetUrl, { headers, redirect: 'follow' });
-      
       res.status(response.status);
       ['content-type','content-length','content-range','accept-ranges','cache-control'].forEach(k => {
         const v = response.headers.get(k);
         if (v) res.setHeader(k, v);
       });
-      
       if (response.body) {
         for await (const chunk of response.body) {
           res.write(chunk);
@@ -62,7 +56,7 @@ export default async function handler(req, res) {
     }
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 15000);
+    const timeout = setTimeout(() => controller.abort(), 25000);
 
     const response = await fetch(targetUrl, {
       headers,
@@ -72,35 +66,37 @@ export default async function handler(req, res) {
 
     clearTimeout(timeout);
 
-    if (!response.ok) {
-      return res.status(response.status).json({
-        error: `Upstream returned ${response.status}`
-      });
-    }
+    const allowedHeaders = ['content-type', 'content-length', 'content-range', 'accept-ranges', 'cache-control'];
+    allowedHeaders.forEach(h => {
+      const val = response.headers.get(h);
+      if (val) res.setHeader(h, val);
+    });
+
+    res.status(response.status);
 
     const contentType = response.headers.get('content-type') || '';
+    const isM3U8 = contentType.includes('mpegurl') || contentType.includes('m3u') ||
+                   targetUrl.includes('.m3u8') || targetUrl.includes('.m3u');
 
-    // نسخ headers
-    ['content-type', 'content-length', 'cache-control'].forEach(h => {
-      const value = response.headers.get(h);
-      if (value) res.setHeader(h, value);
-    });
+    if (isM3U8) {
+      let text = await response.text();
+      const baseUrl = targetUrl.substring(0, targetUrl.lastIndexOf('/') + 1);
 
-    // للصور: إرجاع binary
-    if (contentType.includes('image/')) {
-      const buffer = await response.arrayBuffer();
-      res.setHeader('Cache-Control', 'public, max-age=86400');
-      return res.status(200).send(Buffer.from(buffer));
+      text = text.replace(/^((?!#|https?:\/\/).+\.(?:m3u8|ts|aac|mp4|fmp4))$/gm, (match) => {
+        const absoluteUrl = baseUrl + match;
+        return `/api/proxy?url=${encodeURIComponent(absoluteUrl)}`;
+      });
+
+      return res.send(text);
     }
 
-    // للنصوص و JSON
-    const text = await response.text();
-    return res.status(200).send(text);
+    const buffer = await response.arrayBuffer();
+    return res.send(Buffer.from(buffer));
 
-  } catch (err) {
-    console.error('Proxy error:', err.message);
-    return res.status(err.name === 'AbortError' ? 504 : 502).json({
-      error: err.message || 'Proxy failed'
-    });
+  } catch (error) {
+    if (error.name === 'AbortError') {
+      return res.status(504).json({ error: 'Request timeout' });
+    }
+    return res.status(502).json({ error: 'Proxy error: ' + error.message });
   }
 }

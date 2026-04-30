@@ -1,17 +1,14 @@
-// src/api.js
+// src/api.js — كل طلبات الشبكة تمر عبر /api/proxy لحل Mixed Content
 
-// الصور: proxy فقط إذا HTTP على production
 export function proxyImg(url) {
   if (!url) return null;
+  if (url.startsWith('http://')) return `/api/proxy?url=${encodeURIComponent(url)}`;
+  return url;
+}
 
-  // في production (Vercel) وإذا كان الرابط HTTP، نمرره عبر proxy
-  const isProduction = window.location.protocol === 'https:';
-  const isHttp = url.startsWith('http://');
-
-  if (isProduction && isHttp) {
-    return `/api/proxy?type=api&url=${encodeURIComponent(url)}`;
-  }
-
+export function proxyStream(url) {
+  if (!url) return url;
+  if (url.startsWith('http://')) return `/api/proxy?url=${encodeURIComponent(url)}`;
   return url;
 }
 
@@ -22,26 +19,16 @@ export class XtreamAPI {
 
   buildUrl(action, extraParams = '') {
     const target = `${this.session.url}/player_api.php?username=${this.session.username}&password=${this.session.password}&action=${action}${extraParams}`;
-    return `/api/proxy?type=api&url=${encodeURIComponent(target)}`;
+    return `/api/proxy?url=${encodeURIComponent(target)}`;
   }
 
-  // البث: نفّذ proxy على Vercel (production) لتجنب CORS
   getStreamUrl(type, streamId, extension = 'm3u8') {
     const { url, username, password } = this.session;
-    let directUrl;
-    if (type === 'live') {
-      directUrl = `${url}/live/${username}/${password}/${streamId}.m3u8`;
-    } else if (type === 'series') {
-      directUrl = `${url}/series/${username}/${password}/${streamId}.${extension}`;
-    } else {
-      directUrl = `${url}/movie/${username}/${password}/${streamId}.${extension}`;
-    }
-    // على Vercel: مررر عبر proxy, على localhost: مباشر
-    const isProduction = typeof window !== 'undefined' && window.location.protocol === 'https:';
-    if (isProduction) {
-      return `/api/proxy?type=stream&url=${encodeURIComponent(directUrl)}`;
-    }
-    return directUrl;
+    let direct;
+    if (type === 'live')   direct = `${url}/live/${username}/${password}/${streamId}.${extension}`;
+    else if (type === 'series') direct = `${url}/series/${username}/${password}/${streamId}.${extension}`;
+    else direct = `${url}/movie/${username}/${password}/${streamId}.${extension}`;
+    return `/api/proxy?url=${encodeURIComponent(direct)}`;
   }
 
   async fetchAPI(url) {
@@ -52,7 +39,7 @@ export class XtreamAPI {
       clearTimeout(t);
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       return await r.json();
-    } catch(e) {
+    } catch (e) {
       clearTimeout(t);
       throw e;
     }
@@ -60,24 +47,27 @@ export class XtreamAPI {
 
   async authenticate(url, user, pass) {
     const target = `${url}/player_api.php?username=${user}&password=${pass}`;
-    return this.fetchAPI(`/api/proxy?type=api&url=${encodeURIComponent(target)}`);
+    return this.fetchAPI(`/api/proxy?url=${encodeURIComponent(target)}`);
   }
 
   async getCategories(type) {
     const action = type === 'live' ? 'get_live_categories'
-      : type === 'movies' ? 'get_vod_categories' : 'get_series_categories';
+      : type === 'movies' ? 'get_vod_categories'
+      : 'get_series_categories';
     return this.fetchAPI(this.buildUrl(action));
   }
 
   async getStreams(type, categoryId) {
     const action = type === 'live' ? 'get_live_streams'
-      : type === 'movies' ? 'get_vod_streams' : 'get_series';
+      : type === 'movies' ? 'get_vod_streams'
+      : 'get_series';
     return this.fetchAPI(this.buildUrl(action, `&category_id=${categoryId}`));
   }
 
   async getAllStreams(type) {
     const action = type === 'live' ? 'get_live_streams'
-      : type === 'movies' ? 'get_vod_streams' : 'get_series';
+      : type === 'movies' ? 'get_vod_streams'
+      : 'get_series';
     return this.fetchAPI(this.buildUrl(action));
   }
 

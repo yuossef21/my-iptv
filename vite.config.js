@@ -1,13 +1,11 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// ===== Middleware يحاكي api/proxy.js لوكلياً =====
 function localProxyMiddleware() {
   return {
     name: 'local-proxy',
     configureServer(server) {
       server.middlewares.use('/api/proxy', async (req, res) => {
-        // CORS
         res.setHeader('Access-Control-Allow-Origin', '*')
         res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS')
         res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Range, Accept, Origin')
@@ -17,15 +15,10 @@ function localProxyMiddleware() {
 
         const urlObj = new URL(req.url, 'http://localhost')
         const targetUrl = decodeURIComponent(urlObj.searchParams.get('url') || '')
-        const type = urlObj.searchParams.get('type') || 'api'
 
         if (!targetUrl) { res.writeHead(400); return res.end('No URL'); }
 
-        try {
-          new URL(targetUrl) // تحقق
-        } catch {
-          res.writeHead(400); return res.end('Invalid URL')
-        }
+        try { new URL(targetUrl) } catch { res.writeHead(400); return res.end('Invalid URL') }
 
         try {
           const headers = {
@@ -33,25 +26,10 @@ function localProxyMiddleware() {
             'Accept': '*/*',
             'Connection': 'keep-alive',
           }
-          if (req.headers['range']) headers['Range'] = req.headers['range']
-
-          if (type === 'stream') {
-            const response = await fetch(targetUrl, { headers, redirect: 'follow' })
-            res.writeHead(response.status)
-            ['content-type','content-length','content-range','accept-ranges','cache-control'].forEach(k => {
-              const v = response.headers.get(k)
-              if (v) res.setHeader(k, v)
-            })
-            if (response.body) {
-              for await (const chunk of response.body) {
-                res.write(chunk)
-              }
-            }
-            return res.end()
-          }
+          if (req.headers.range) headers['Range'] = req.headers.range
 
           const controller = new AbortController()
-          const timeout = setTimeout(() => controller.abort(), 15000)
+          const timeout = setTimeout(() => controller.abort(), 25000)
 
           const response = await fetch(targetUrl, {
             headers,
@@ -60,15 +38,26 @@ function localProxyMiddleware() {
           })
           clearTimeout(timeout)
 
-          // تمرير headers مهمة
-          ;['content-type','content-length','cache-control'].forEach(h => {
+          const contentType = response.headers.get('content-type') || ''
+          const isM3U8 = contentType.includes('mpegurl') || contentType.includes('m3u') ||
+                         targetUrl.includes('.m3u8') || targetUrl.includes('.m3u')
+
+          ['content-type','content-length','content-range','accept-ranges','cache-control'].forEach(h => {
             const v = response.headers.get(h)
             if (v) res.setHeader(h, v)
           })
 
           res.writeHead(response.status)
 
-          // إرجاع البيانات
+          if (isM3U8) {
+            let text = await response.text()
+            const baseUrl = targetUrl.substring(0, targetUrl.lastIndexOf('/') + 1)
+            text = text.replace(/^((?!#|https?:\/\/).+\.(?:m3u8|ts|aac|mp4|fmp4))$/gm, match => {
+              return `/api/proxy?url=${encodeURIComponent(baseUrl + match)}`
+            })
+            return res.end(text)
+          }
+
           const buf = await response.arrayBuffer()
           res.end(Buffer.from(buf))
 
@@ -82,9 +71,5 @@ function localProxyMiddleware() {
 }
 
 export default defineConfig({
-  plugins: [
-    react(),
-    localProxyMiddleware(),   // ← يعمل محلياً فقط
-  ],
-  // على Vercel: api/proxy.js يتولى الأمر تلقائياً
+  plugins: [react(), localProxyMiddleware()],
 })
